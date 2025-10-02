@@ -12,30 +12,57 @@
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .sidebar { background-color: #2c3e50; height: 100vh; position: fixed; width: 250px; }
-        .content { margin-left: 250px; padding: 20px; }
-        .card { border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 10px; }
-        .nav-link { color: #ecf0f1 !important; transition: background-color 0.3s; }
+        body { background-color: #f8f9fa; transition: background-color 0.3s; }
+        body.dark { background-color: #121212; color: #ffffff; }
+        .sidebar { background-color: #2c3e50; height: 100vh; position: fixed; width: 250px; transition: background-color 0.3s; }
+        .sidebar.dark { background-color: #1e1e1e; }
+        .content { margin-left: 250px; padding: 20px; transition: color 0.3s; }
+        .card { border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 10px; transition: background-color 0.3s, color 0.3s; }
+        .card.dark { background-color: #2c2c2c; color: #ffffff; box-shadow: 0 4px 15px rgba(255,255,255,0.1); }
+        .nav-link { color: #ecf0f1 !important; transition: background-color 0.3s; text-align: left; }
         .nav-link:hover { background-color: #34495e; }
         .btn-primary { background-color: #3498db; border-color: #3498db; }
+        .btn-secondary { background-color: #6c757d; border-color: #6c757d; }
         .btn-success { background-color: #2ecc71; border-color: #2ecc71; }
         .fade-in { animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .table th { background-color: #dfe6e9; }
+        .table th { background-color: #dfe6e9; transition: background-color 0.3s, color 0.3s; }
+        .table.dark th { background-color: #343a40; color: #ffffff; }
+        .table.dark td { color: #ffffff; }
         .loading { display: none; text-align: center; padding: 20px; color: #7f8c8d; }
         .form-group { margin-bottom: 1.5rem; }
         .alert-success { display: none; margin-top: 10px; }
-        footer { position: fixed; bottom: 0; width: 100%; background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 10px; }
+        footer { position: fixed; bottom: 0; width: 100%; background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 10px; transition: background-color 0.3s, color 0.3s; }
+        footer.dark { background-color: #1e1e1e; color: #bbbbbb; }
         .filter-btn { margin-top: 20px; }
         .table-loading { text-align: center; padding: 20px; }
         .bg-purple { background-color: #6f42c1 !important; }
+        .table-improved { border: 2px solid #dee2e6; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: border-color 0.3s; }
+        .table-improved.dark { border-color: #444; box-shadow: 0 2px 10px rgba(255,255,255,0.05); }
+        .text-shep { color: blue; font-weight: bold; }
+        .text-lpr { color: red; font-weight: bold; }
+        .logo { width: 100px; display: block; margin: 0 auto 20px; }
+        .input-group input, .form-control, .form-select { transition: background-color 0.3s, color 0.3s; }
+        .dark .form-control, .dark .form-select { background-color: #333; color: #fff; border-color: #444; }
+        .dark .form-control:focus, .dark .form-select:focus { border-color: #3498db; box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25); }
+        .dark .alert-success { background-color: #2ecc71; color: #000; }
+        .dark .card-header { color: #fff; }
+        .dark .text-success { color: #2ecc71 !important; }
+        .dark .text-danger { color: #ff6b6b !important; }
+        .dark .btn-secondary { background-color: #4f4f4f; border-color: #4f4f4f; }
+        .dark .btn-outline-primary { border-color: #3498db; color: #3498db; }
+        .dark .btn-outline-success { border-color: #2ecc71; color: #2ecc71; }
+        .dark .btn-outline-warning { border-color: #ffc107; color: #ffc107; }
+        .dark .btn-outline-danger { border-color: #dc3545; color: #dc3545; }
+        .dark .table-striped tbody tr:nth-of-type(odd) { background-color: #222; }
+        .dark .table-striped tbody tr:nth-of-type(even) { background-color: #333; }
     </style>
 </head>
-<body>
+<body class="{{ session.get('theme', 'light') }}">
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar {{ session.get('theme', 'light') }}">
         <div class="p-3">
+            <img src="{{ url_for('static', filename='knlogo.png') }}" alt="KN Logo" class="logo">
             <h4 class="text-white mb-4"><i class="fas fa-palette"></i> Suivi Palettes</h4>
             <ul class="nav flex-column">
                 <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('formulaire')"><i class="fas fa-plus"></i> Nouvel Enregistrement</a></li>
@@ -44,8 +71,10 @@
                 <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('entree')"><i class="fas fa-arrow-down"></i> Entrées</a></li>
                 <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('sortie')"><i class="fas fa-arrow-up"></i> Sorties</a></li>
                 <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('stats')"><i class="fas fa-chart-pie"></i> Stats</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('export') }}"><i class="fas fa-download"></i> Exporter Excel</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
             </ul>
+            <button id="toggleTheme" class="btn btn-secondary mt-3 w-100"><i class="fas fa-moon"></i> Mode Nuit</button>
         </div>
     </div>
 
@@ -53,7 +82,7 @@
     <div class="content">
         <!-- Formulaire d'enregistrement -->
         <div id="formulaire" class="section fade-in">
-            <div class="card mb-4">
+            <div class="card mb-4 {{ session.get('theme', 'light') }}">
                 <div class="card-header bg-primary text-white">
                     <h5><i class="fas fa-plus"></i> Nouvel Enregistrement</h5>
                 </div>
@@ -70,6 +99,8 @@
                                     <select class="form-select" id="type_mvt" required>
                                         <option value="Réception">Réception</option>
                                         <option value="Expédition">Expédition</option>
+                                        <option value="Restitution">Restitution</option>
+                                        <option value="Retour">Retour</option>
                                     </select>
                                 </div>
                                 <div class="mb-3">
@@ -87,19 +118,58 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">QUAI</label>
-                                    <input type="text" class="form-control" id="quai">
+									<input type="text" 
+										   class="form-control" 
+										   id="quai" 
+										   maxlength="2" 
+										   pattern="[0-9]{1,2}" 
+										   inputmode="numeric" 
+										   title="Veuillez entrer un nombre à 1 ou 2 chiffres">
+
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Palettes EUR <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" id="palettes_eur" min="0" required>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="palettes_eur" min="0" value="0" required>
+                                        <select class="form-select" id="eur_dim">
+                                            <option selected>80x120</option>
+                                            <option>100x120</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Palettes <span class="text-shep">CHEP</span> <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="palettes_shep" min="0" value="0" required>
+                                        <select class="form-select" id="shep_dim">
+                                            <option selected>80x120</option>
+                                            <option>100x120</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Palettes <span class="text-lpr">LPR</span> <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="palettes_lpr" min="0" value="0" required>
+                                        <select class="form-select" id="lpr_dim">
+                                            <option selected>80x120</option>
+                                            <option>100x120</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Palettes Perdues <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" id="palettes_perdues" min="0" required>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="palettes_perdues" min="0" value="0" required>
+                                        <select class="form-select" id="perdue_dim">
+                                            <option selected>80x120</option>
+                                            <option>100x120</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Total Palettes (EUR + Perdues)</label>
-                                    <input type="number" class="form-control" id="total_palettes" readonly>
+                                    <label class="form-label">Total Palettes</label>
+                                    <input type="number" class="form-control" id="total_palettes" readonly value="0">
                                 </div>
                             </div>
                         </div>
@@ -141,7 +211,7 @@
 
         <!-- Planning -->
         <div id="planning" class="section" style="display: none;">
-            <div class="card mb-4">
+            <div class="card mb-4 {{ session.get('theme', 'light') }}">
                 <div class="card-header bg-info text-white">
                     <h5><i class="fas fa-calendar"></i> Planning</h5>
                 </div>
@@ -153,6 +223,8 @@
                                 <option value="">Tous</option>
                                 <option value="Réception">Réception</option>
                                 <option value="Expédition">Expédition</option>
+                                <option value="Restitution">Restitution</option>
+                                <option value="Retour">Retour</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -201,7 +273,7 @@
 
         <!-- Total Palettes -->
         <div id="total" class="section" style="display: none;">
-            <div class="card mb-4">
+            <div class="card mb-4 {{ session.get('theme', 'light') }}">
                 <div class="card-header bg-success text-white">
                     <h5><i class="fas fa-chart-bar"></i> Total Palettes</h5>
                 </div>
@@ -239,13 +311,14 @@
                             <tr>
                                 <th>Semaine</th>
                                 <th>Date</th>
-                                <th>EUR Entree</th>
-                                <th>Non Conf Entree</th>
-                                <th>Total Entree</th>
-                                <th>EUR Rendus</th>
-                                <th>EUR Non Rendus</th>
+                                <th>Entrée (EUR + SHEP + LPR)</th>
+                                <th>Non Conforme Entrée</th>
+                                <th>Total Entrée</th>
+                                <th>Rendus (EUR + SHEP + LPR)</th>
+                                <th>Non Rendus</th>
                                 <th>Total Sortie</th>
                                 <th>Stock QUAI</th>
+                                <th>Non Rendus Cumulé</th>
                                 <th>% Retour</th>
                             </tr>
                         </thead>
@@ -256,7 +329,7 @@
 
         <!-- Entrées -->
         <div id="entree" class="section" style="display: none;">
-            <div class="card mb-4">
+            <div class="card mb-4 {{ session.get('theme', 'light') }}">
                 <div class="card-header bg-warning text-white">
                     <h5><i class="fas fa-arrow-down"></i> Entrées</h5>
                 </div>
@@ -281,7 +354,7 @@
                     <div class="table-loading" id="loadingEntree">
                         <i class="fas fa-spinner fa-spin"></i> Chargement...
                     </div>
-                    <table id="tableEntree" class="table table-striped" style="width:100%">
+                    <table id="tableEntree" class="table table-striped table-improved" style="width:100%">
                         <thead>
                             <tr>
                                 <th>Semaine</th>
@@ -289,7 +362,13 @@
                                 <th>Transp</th>
                                 <th>N° Bons</th>
                                 <th>EUR</th>
+                                <th>EUR Dim</th>
+                                <th><span class="text-shep">SHEP</span></th>
+                                <th>SHEP Dim</th>
+                                <th><span class="text-lpr">LPR</span></th>
+                                <th>LPR Dim</th>
                                 <th>PERDUE</th>
+                                <th>PERDUE Dim</th>
                                 <th>TOTAL</th>
                                 <th>Commentaire</th>
                             </tr>
@@ -301,7 +380,7 @@
 
         <!-- Sorties -->
         <div id="sortie" class="section" style="display: none;">
-            <div class="card mb-4">
+            <div class="card mb-4 {{ session.get('theme', 'light') }}">
                 <div class="card-header bg-danger text-white">
                     <h5><i class="fas fa-arrow-up"></i> Sorties</h5>
                 </div>
@@ -326,7 +405,7 @@
                     <div class="table-loading" id="loadingSortie">
                         <i class="fas fa-spinner fa-spin"></i> Chargement...
                     </div>
-                    <table id="tableSortie" class="table table-striped" style="width:100%">
+                    <table id="tableSortie" class="table table-striped table-improved" style="width:100%">
                         <thead>
                             <tr>
                                 <th>Semaine</th>
@@ -334,7 +413,13 @@
                                 <th>Transp</th>
                                 <th>N° Bons</th>
                                 <th>EUR Rendus</th>
+                                <th>EUR Dim</th>
+                                <th><span class="text-shep">SHEP</span> Rendus</th>
+                                <th>SHEP Dim</th>
+                                <th><span class="text-lpr">LPR</span> Rendus</th>
+                                <th>LPR Dim</th>
                                 <th>PERDUE</th>
+                                <th>PERDUE Dim</th>
                                 <th>TOTAL</th>
                                 <th>Commentaire</th>
                             </tr>
@@ -346,17 +431,17 @@
 
         <!-- Stats -->
         <div id="stats" class="section" style="display: none;">
-            <div class="card mb-4">
+            <div class="card mb-4 {{ session.get('theme', 'light') }}">
                 <div class="card-header bg-purple text-white">
                     <h5><i class="fas fa-chart-pie"></i> Stats & Analyses</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <canvas id="pieChartEntree" height="200"></canvas>
+                            <canvas id="pieChartEntree" height="150"></canvas>
                         </div>
                         <div class="col-md-6">
-                            <canvas id="pieChartSortie" height="200"></canvas>
+                            <canvas id="pieChartSortie" height="150"></canvas>
                         </div>
                     </div>
                     <div id="statsSummary" class="mt-3"></div>
@@ -365,9 +450,16 @@
         </div>
     </div>
 
-    <footer>
-        Amélioré et proposé par Mohamed Bouzekri - mohamed.bouzekri@kuehne-nagel.com
-    </footer>
+    <footer class="{{ session.get('theme', 'light') }}" 
+        style="display: flex; justify-content: space-between; align-items: center; padding: 10px;">
+    <div style="text-align: left;">
+        Bienvenue {{ username }}
+    </div>
+    <div style="text-align: center; flex: 1;">
+        Réalisé par <a href="mailto:mohamed.bouzekri@kuehne-nagel.com">Mohamed Bouzekri</a>
+    </div>
+</footer>
+
 
     <script>
         let transporteurs = [];
@@ -380,8 +472,28 @@
             initForm();
             showSection('formulaire');
             calculateTotal(); // Calcul initial du total
-            $('#palettes_eur, #palettes_perdues').on('input', calculateTotal); // Mettre à jour le total en temps réel
+            $('#palettes_eur, #palettes_shep, #palettes_lpr, #palettes_perdues').on('input', calculateTotal); // Mettre à jour le total en temps réel
+            updateThemeButton();
+            $('#toggleTheme').click(function() {
+                const newTheme = $('body').hasClass('dark') ? 'light' : 'dark';
+                $.post('/toggle_theme', {theme: newTheme}, function() {
+                    $('body').toggleClass('dark');
+                    $('.sidebar').toggleClass('dark');
+                    $('.card').toggleClass('dark');
+                    $('.table').toggleClass('dark');
+                    $('footer').toggleClass('dark');
+                    updateThemeButton();
+                });
+            });
         });
+
+        function updateThemeButton() {
+            if ($('body').hasClass('dark')) {
+                $('#toggleTheme').html('<i class="fas fa-sun"></i> Mode Clair');
+            } else {
+                $('#toggleTheme').html('<i class="fas fa-moon"></i> Mode Nuit');
+            }
+        }
 
         function loadTransporteurs() {
             $.get('/api/transporteurs', function(data) {
@@ -401,17 +513,19 @@
 
         $('#type_mvt').on('change', function() {
             var type = $(this).val();
-            var label = (type === 'Réception') ? 'Expéditeur <span class="text-danger">*</span>' : 'Transporteur <span class="text-danger">*</span>';
+            var label = (type === 'Réception' || type === 'Restitution') ? 'Expéditeur <span class="text-danger">*</span>' : 'Transporteur <span class="text-danger">*</span>';
             $('label[for=transporteur]').html(label);
             $('#transporteur').empty().append('<option value="">Sélectionner...</option>');
-            var options = (type === 'Réception') ? expediteurs : transporteurs;
+            var options = (type === 'Réception' || type === 'Restitution') ? expediteurs : transporteurs.filter(t => !expediteurs.includes(t));
             options.forEach(t => $('#transporteur').append(`<option value="${t}">${t}</option>`));
         });
 
         function calculateTotal() {
             const eur = parseInt($('#palettes_eur').val()) || 0;
+            const shep = parseInt($('#palettes_shep').val()) || 0;
+            const lpr = parseInt($('#palettes_lpr').val()) || 0;
             const perdues = parseInt($('#palettes_perdues').val()) || 0;
-            const total = eur + perdues;
+            const total = eur + shep + lpr + perdues;
             $('#total_palettes').val(total);
         }
 
@@ -421,7 +535,7 @@
                 const nouveauTransp = $('#nouveau_transp').val().trim();
                 if (nouveauTransp) {
                     transporteurs.push(nouveauTransp);
-                    if ($('#type_mvt').val() === 'Réception') {
+                    if ($('#type_mvt').val() === 'Réception' || $('#type_mvt').val() === 'Restitution') {
                         expediteurs.push(nouveauTransp);
                     }
                     $('#type_mvt').change(); // Refresh options
@@ -435,7 +549,13 @@
                     reference: $('#reference').val(),
                     quai: $('#quai').val(),
                     palettes_eur: $('#palettes_eur').val(),
+                    palettes_shep: $('#palettes_shep').val(),
+                    palettes_lpr: $('#palettes_lpr').val(),
                     palettes_perdues: $('#palettes_perdues').val(),
+                    eur_dim: $('#eur_dim').val(),
+                    shep_dim: $('#shep_dim').val(),
+                    lpr_dim: $('#lpr_dim').val(),
+                    perdue_dim: $('#perdue_dim').val(),
                     heure_plan: $('#heure_plan').val(),
                     heure_arr: $('#heure_arr').val(),
                     heure_dep: $('#heure_dep').val(),
@@ -445,7 +565,7 @@
                     alert('Veuillez sélectionner un partenaire.');
                     return;
                 }
-                if (parseInt(formData.palettes_eur) < 0 || parseInt(formData.palettes_perdues) < 0) {
+                if (parseInt(formData.palettes_eur) < 0 || parseInt(formData.palettes_shep) < 0 || parseInt(formData.palettes_lpr) < 0 || parseInt(formData.palettes_perdues) < 0) {
                     alert('Les valeurs des palettes doivent être positives.');
                     return;
                 }
@@ -461,6 +581,10 @@
                             $('#successMessage').fadeIn().delay(2000).fadeOut();
                             $('#formEnreg')[0].reset();
                             $('#date').val(new Date().toISOString().split('T')[0]);
+                            $('#palettes_eur').val(0);
+                            $('#palettes_shep').val(0);
+                            $('#palettes_lpr').val(0);
+                            $('#palettes_perdues').val(0);
                             calculateTotal(); // Réinitialiser le total
                             loadTransporteurs(); // Reload transporteurs
                             // Rafraîchir tous les tableaux pour s'assurer que les données apparaissent
@@ -521,7 +645,7 @@
                         {data: 'NB Pals Réelles Sol'}, {data: 'Heure_arr'}, {data: 'Heure_dep'},
                         {data: 'Retard_str'}
                     ],
-                    pageLength: 25,
+                    pageLength: 2000,
                     order: [[2, 'desc']],
                     language: {url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'}
                 });
@@ -543,12 +667,12 @@
                 totalTable = $('#tableTotal').DataTable({
                     data: data,
                     columns: [
-                        {data: 'Semaine'}, {data: 'Date'}, {data: 'EUR_entree'},
-                        {data: 'Non_conforme_entree'}, {data: 'TOTAL_entree'},
-                        {data: 'EUR_rendus'}, {data: 'EUR_non_rendus'}, {data: 'TOTAL_sortie'},
-                        {data: 'Stock_Sur_QUAI_EUR'}, {data: 'Pourcentage_Retour'}
+                        {data: 'Semaine'}, {data: 'Date'}, {data: 'Entrée (EUR + SHEP + LPR)'},
+                        {data: 'Non Conforme Entrée'}, {data: 'TOTAL_entree'},
+                        {data: 'Rendus (EUR + SHEP + LPR)'}, {data: 'Non Rendus'}, {data: 'TOTAL_sortie'},
+                        {data: 'Stock_Sur_QUAI'}, {data: 'Non Rendus Cumulé'}, {data: 'Pourcentage_Retour'}
                     ],
-                    pageLength: 25,
+                    pageLength: 2000,
                     order: [[1, 'desc']],
                     language: {url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'}
                 });
@@ -561,8 +685,8 @@
                         data: {
                             labels: data.map(d => d.Date),
                             datasets: [{
-                                label: 'Entrées EUR',
-                                data: data.map(d => d.EUR_entree),
+                                label: 'Entrées (EUR + SHEP + LPR)',
+                                data: data.map(d => d['Entrée (EUR + SHEP + LPR)']),
                                 backgroundColor: 'rgba(46, 204, 113, 0.6)'
                             }]
                         },
@@ -603,10 +727,12 @@
                     data: data,
                     columns: [
                         {data: 'Semaine'}, {data: 'Date'}, {data: 'Transp'},
-                        {data: 'N° Bons'}, {data: 'EUR'}, {data: 'PERDUE'},
+                        {data: 'N° Bons'}, {data: 'EUR'}, {data: 'EUR Dim'},
+                        {data: 'SHEP'}, {data: 'SHEP Dim'}, {data: 'LPR'},
+                        {data: 'LPR Dim'}, {data: 'PERDUE'}, {data: 'PERDUE Dim'},
                         {data: 'TOTAL'}, {data: 'Commentaire'}
                     ],
-                    pageLength: 25,
+                    pageLength: 2000,
                     order: [[1, 'desc']],
                     language: {url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'}
                 });
@@ -629,10 +755,12 @@
                     data: data,
                     columns: [
                         {data: 'Semaine'}, {data: 'Date'}, {data: 'Transp'},
-                        {data: 'N° Bons'}, {data: 'EUR_Rendus'}, {data: 'PERDUE'},
+                        {data: 'N° Bons'}, {data: 'EUR Rendus'}, {data: 'EUR Dim'},
+                        {data: 'SHEP Rendus'}, {data: 'SHEP Dim'}, {data: 'LPR Rendus'},
+                        {data: 'LPR Dim'}, {data: 'PERDUE'}, {data: 'PERDUE Dim'},
                         {data: 'TOTAL'}, {data: 'Commentaire'}
                     ],
-                    pageLength: 25,
+                    pageLength: 2000,
                     order: [[1, 'desc']],
                     language: {url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'}
                 });
@@ -649,25 +777,31 @@
                     <p>Total Retard: <span class="fw-bold">${data.total_retard}</span></p>
                     <p>Average Retard: <span class="fw-bold">${data.average_retard}</span></p>
                     <p>Total EUR Entrée: <span class="fw-bold text-success">${data.total_eur_entree}</span></p>
+                    <p>Total <span class="text-shep">SHEP</span> Entrée: <span class="fw-bold text-success">${data.total_shep_entree}</span></p>
+                    <p>Total <span class="text-lpr">LPR</span> Entrée: <span class="fw-bold text-success">${data.total_lpr_entree}</span></p>
                     <p>Total Perdues Entrée: <span class="fw-bold text-danger">${data.total_perdues_entree}</span></p>
                     <p>Total EUR Sortie: <span class="fw-bold text-success">${data.total_eur_sortie}</span></p>
+                    <p>Total <span class="text-shep">SHEP</span> Sortie: <span class="fw-bold text-success">${data.total_shep_sortie}</span></p>
+                    <p>Total <span class="text-lpr">LPR</span> Sortie: <span class="fw-bold text-success">${data.total_lpr_sortie}</span></p>
                     <p>Total Perdues Sortie: <span class="fw-bold text-danger">${data.total_perdues_sortie}</span></p>
                     <p>Recommendation: <span class="fw-bold">${data.recommendation}</span></p>
                 `;
 
-                let owedToHtml = '<h5 class="mt-4">Dettes envers Expéditeurs</h5><table class="table table-bordered"><thead class="table-dark"><tr><th>Expéditeur</th><th>Palettes Dues</th></tr></thead><tbody>';
+                let owedToHtml = '<h5 class="mt-4">Dettes envers Partenaires (Solde Restant)</h5><table class="table table-bordered table-improved"><thead class="table-dark"><tr><th>Partenaire</th><th>Palettes Dues</th></tr></thead><tbody>';
                 Object.entries(data.owed_to).forEach(([key, value]) => {
-                    owedToHtml += `<tr><td>${key}</td><td class="text-danger fw-bold">${value}</td></tr>`;
+                    let color = 'text-danger';
+                    owedToHtml += `<tr><td>${key}</td><td class="${color} fw-bold">${value}</td></tr>`;
                 });
                 owedToHtml += '</tbody></table>';
 
-                let owedFromHtml = '<h5 class="mt-4">Dettes des Transporteurs</h5><table class="table table-bordered"><thead class="table-dark"><tr><th>Transporteur</th><th>Palettes Dues</th></tr></thead><tbody>';
+                let owedFromHtml = '<h5 class="mt-4">Dettes des Transporteurs</h5><table class="table table-bordered table-improved"><thead class="table-dark"><tr><th>Partenaire</th><th>Palettes Dues</th></tr></thead><tbody>';
                 Object.entries(data.owed_from).forEach(([key, value]) => {
-                    owedFromHtml += `<tr><td>${key}</td><td class="text-success fw-bold">${value}</td></tr>`;
+                    let color = 'text-success';
+                    owedFromHtml += `<tr><td>${key}</td><td class="${color} fw-bold">${value}</td></tr>`;
                 });
                 owedFromHtml += '</tbody></table>';
 
-                $('#statsSummary').html(summaryHtml + owedToHtml + owedFromHtml);
+                $('#statsSummary').html(summaryHtml + '<div class="row"><div class="col-md-6">' + owedToHtml + '</div><div class="col-md-6">' + owedFromHtml + '</div></div>');
 
                 // Pie Chart for Entrée
                 const ctxEntree = document.getElementById('pieChartEntree').getContext('2d');
@@ -675,11 +809,19 @@
                 pieEntreeChart = new Chart(ctxEntree, {
                     type: 'pie',
                     data: {
-                        labels: ['EUR', 'Perdues'],
+                        labels: ['EUR', 'SHEP', 'LPR', 'PERDUE'],
                         datasets: [{
-                            data: [data.total_eur_entree, data.total_perdues_entree],
-                            backgroundColor: ['rgba(46, 204, 113, 0.6)', 'rgba(231, 76, 60, 0.6)']
+                            data: [data.total_eur_entree, data.total_shep_entree, data.total_lpr_entree, data.total_perdues_entree],
+                            backgroundColor: ['rgba(46, 204, 113, 0.6)', 'rgba(0, 0, 255, 0.6)', 'rgba(255, 0, 0, 0.6)', 'rgba(128, 128, 128, 0.6)']
                         }]
+                    },
+                    options: {
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Répartition Entrées'
+                            }
+                        }
                     }
                 });
                 // Pie Chart for Sortie
@@ -688,11 +830,19 @@
                 pieSortieChart = new Chart(ctxSortie, {
                     type: 'pie',
                     data: {
-                        labels: ['EUR Rendus', 'Perdues'],
+                        labels: ['EUR Rendus', 'SHEP Rendus', 'LPR Rendus', 'PERDUE'],
                         datasets: [{
-                            data: [data.total_eur_sortie, data.total_perdues_sortie],
-                            backgroundColor: ['rgba(46, 204, 113, 0.6)', 'rgba(231, 76, 60, 0.6)']
+                            data: [data.total_eur_sortie, data.total_shep_sortie, data.total_lpr_sortie, data.total_perdues_sortie],
+                            backgroundColor: ['rgba(46, 204, 113, 0.6)', 'rgba(0, 0, 255, 0.6)', 'rgba(255, 0, 0, 0.6)', 'rgba(128, 128, 128, 0.6)']
                         }]
+                    },
+                    options: {
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Répartition Sorties'
+                            }
+                        }
                     }
                 });
             });

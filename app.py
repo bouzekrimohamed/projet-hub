@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_sqlalchemy import SQLAlchemy
 import datetime as dt_module
+import pandas as pd
+import io
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_key'  # For session and login
@@ -47,9 +49,16 @@ class Entree(db.Model):
     transp = db.Column(db.String(100))
     n_bons = db.Column(db.String(100))
     eur = db.Column(db.Integer)
+    CHEP = db.Column(db.Integer)
+    lpr = db.Column(db.Integer)
     perdue = db.Column(db.Integer)
+    eur_dim = db.Column(db.String(20))
+    CHEP_dim = db.Column(db.String(20))
+    lpr_dim = db.Column(db.String(20))
+    perdue_dim = db.Column(db.String(20))
     total = db.Column(db.Integer)
     commentaire = db.Column(db.Text)
+    type_mvt = db.Column(db.String(50))
 
 class Sortie(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -59,10 +68,16 @@ class Sortie(db.Model):
     transp = db.Column(db.String(100))
     n_bons = db.Column(db.String(100))
     eur_rendus = db.Column(db.Integer)
-    eur_non_rendus = db.Column(db.Integer)
+    CHEP_rendus = db.Column(db.Integer)
+    lpr_rendus = db.Column(db.Integer)
     perdue = db.Column(db.Integer)
+    eur_dim = db.Column(db.String(20))
+    CHEP_dim = db.Column(db.String(20))
+    lpr_dim = db.Column(db.String(20))
+    perdue_dim = db.Column(db.String(20))
     total = db.Column(db.Integer)
     commentaire = db.Column(db.Text)
+    type_mvt = db.Column(db.String(50))
 
 # Obtenir le jour de la semaine et la semaine ISO
 def get_jour_semaine(date_str):
@@ -106,14 +121,14 @@ def calculer_retard(heure_planifiee, heure_arrivee):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(user_id)
+    return db.session.get(User, user_id)
 
 # Route principale
 @app.route('/')
 @login_required
 def index():
     current_date = datetime.now().strftime('%Y-%m-%d')
-    return render_template('index.html', current_date=current_date)
+    return render_template('index.html', current_date=current_date, username=current_user.id)
 
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
@@ -121,7 +136,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = User.query.get(username)
+        user = db.session.get(User, username)
         if user and check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('index'))
@@ -135,6 +150,13 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+# Toggle theme
+@app.route('/toggle_theme', methods=['POST'])
+def toggle_theme():
+    theme = request.json.get('theme')
+    session['theme'] = theme
+    return jsonify({'success': True})
 
 # API pour enregistrer des données
 @app.route('/api/enregistrer', methods=['POST'])
@@ -150,7 +172,7 @@ def api_enregistrer():
     transporteur = data['transporteur'].strip()
     if transporteur == "":
         return jsonify({'error': 'Veuillez sélectionner ou entrer un transporteur'}), 400
-    if not Transporteur.query.filter_by(name=transporteur).first():
+    if not db.session.query(Transporteur.query.filter_by(name=transporteur).exists()).scalar():
         new_transp = Transporteur(name=transporteur)
         db.session.add(new_transp)
         db.session.commit()
@@ -159,8 +181,14 @@ def api_enregistrer():
     reference = data.get('reference', '')
     quai = data.get('quai', '')
     palettes_eur = int(data.get('palettes_eur', 0))
+    palettes_CHEP = int(data.get('palettes_CHEP', 0))
+    palettes_lpr = int(data.get('palettes_lpr', 0))
     palettes_perdues = int(data.get('palettes_perdues', 0))
-    total_palettes = palettes_eur + palettes_perdues
+    eur_dim = data.get('eur_dim', '80x120')
+    CHEP_dim = data.get('CHEP_dim', '80x120')
+    lpr_dim = data.get('lpr_dim', '80x120')
+    perdue_dim = data.get('perdue_dim', '80x120')
+    total_palettes = palettes_eur + palettes_CHEP + palettes_lpr + palettes_perdues
     heure_plan = data.get('heure_plan', '')
     heure_arr = data.get('heure_arr', '')
     heure_dep = data.get('heure_dep', '')
@@ -180,18 +208,21 @@ def api_enregistrer():
         db.session.add(new_planning)
 
         # Enregistrer dans Entree ou Sortie
-        if type_mvt == "Réception":
+        if type_mvt in ["Réception", "Retour"]:
             new_entree = Entree(
                 type="ENTREE", semaine=semaine, date=dt.date(), transp=transporteur,
-                n_bons=reference, eur=palettes_eur, perdue=palettes_perdues,
-                total=total_palettes, commentaire=commentaire
+                n_bons=reference, eur=palettes_eur, CHEP=palettes_CHEP, lpr=palettes_lpr,
+                perdue=palettes_perdues, eur_dim=eur_dim, CHEP_dim=CHEP_dim, lpr_dim=lpr_dim,
+                perdue_dim=perdue_dim, total=total_palettes, commentaire=commentaire, type_mvt=type_mvt
             )
             db.session.add(new_entree)
-        else:
+        else:  # Expédition or Restitution
             new_sortie = Sortie(
                 type="SORTIE", semaine=semaine, date=dt.date(), transp=transporteur,
-                n_bons=reference, eur_rendus=palettes_eur, eur_non_rendus=0,
-                perdue=palettes_perdues, total=total_palettes, commentaire=commentaire
+                n_bons=reference, eur_rendus=palettes_eur, CHEP_rendus=palettes_CHEP,
+                lpr_rendus=palettes_lpr, perdue=palettes_perdues, eur_dim=eur_dim,
+                CHEP_dim=CHEP_dim, lpr_dim=lpr_dim, perdue_dim=perdue_dim,
+                total=total_palettes, commentaire=commentaire, type_mvt=type_mvt
             )
             db.session.add(new_sortie)
 
@@ -261,44 +292,45 @@ def api_total_palettes():
 
         data = []
         stock_cumule = 0
+        non_rendus_cumule = 0
         for date in all_dates:
-            # Entree
-            eur_entree = db.session.query(db.func.sum(Entree.eur)).filter(Entree.date == date).scalar() or 0
+            # Entree (Réception + Retour)
+            entree_good = db.session.query(db.func.sum(Entree.eur + Entree.CHEP + Entree.lpr)).filter(Entree.date == date).scalar() or 0
             non_conf_entree = db.session.query(db.func.sum(Entree.perdue)).filter(Entree.date == date).scalar() or 0
-            total_entree = eur_entree + non_conf_entree
+            total_entree = entree_good + non_conf_entree
             entree_first = Entree.query.filter_by(date=date).first()
             semaine_ent = entree_first.semaine if entree_first else date.isocalendar().week
 
-            # Sortie
-            eur_rendus = db.session.query(db.func.sum(Sortie.eur_rendus)).filter(Sortie.date == date).scalar() or 0
-            eur_non_rendus = db.session.query(db.func.sum(Sortie.perdue)).filter(Sortie.date == date).scalar() or 0
-            non_conf_sortie = 0
-            total_sortie = eur_rendus + eur_non_rendus + non_conf_sortie
+            # Sortie (Expédition + Restitution)
+            sortie_rendus = db.session.query(db.func.sum(Sortie.eur_rendus + Sortie.CHEP_rendus + Sortie.lpr_rendus)).filter(Sortie.date == date).scalar() or 0
+            sortie_perdue = db.session.query(db.func.sum(Sortie.perdue)).filter(Sortie.date == date).scalar() or 0
+            total_sortie = sortie_rendus + sortie_perdue
             sortie_first = Sortie.query.filter_by(date=date).first()
             semaine_sort = sortie_first.semaine if sortie_first else date.isocalendar().week
 
-            stock_cumule += eur_entree - eur_rendus
-            retour = eur_rendus
-            pourcentage_retour = (eur_rendus / total_sortie * 100) if total_sortie > 0 else 0
+            stock_cumule += total_entree - total_sortie
+            non_rendus_day = sortie_perdue
+            non_rendus_cumule += non_rendus_day
+            retour = sortie_rendus
+            pourcentage_retour = (sortie_rendus / total_sortie * 100) if total_sortie > 0 else 0
 
             row = {
                 "Semaine": str(semaine_ent),
                 "Date": date.strftime('%Y-%m-%d'),
-                "EUR_entree": eur_entree,
-                "Non_conforme_entree": non_conf_entree,
+                "Entrée (EUR + CHEP + LPR)": entree_good,
+                "Non Conforme Entrée": non_conf_entree,
                 "TOTAL_entree": total_entree,
                 "Separator1": "",
                 "Semaine_sortie": str(semaine_sort),
                 "Date_sortie": date.strftime('%Y-%m-%d'),
-                "EUR_rendus": eur_rendus,
-                "EUR_non_rendus": eur_non_rendus,
-                "Non_conforme_sortie": non_conf_sortie,
+                "Rendus (EUR + CHEP + LPR)": sortie_rendus,
+                "Non Rendus": non_rendus_day,
                 "TOTAL_sortie": total_sortie,
                 "Separator2": "",
-                "Stock_Sur_QUAI_EUR": stock_cumule,
+                "Stock_Sur_QUAI": stock_cumule,
+                "Non Rendus Cumulé": non_rendus_cumule,
                 "RETOUR": retour,
-                "Pourcentage_Retour": f"{pourcentage_retour:.2f}%",
-                "EUR_Non_rendus_final": eur_non_rendus
+                "Pourcentage_Retour": f"{pourcentage_retour:.2f}%"
             }
             data.append(row)
 
@@ -349,7 +381,13 @@ def api_entree():
                 'Transp': e.transp or '',
                 'N° Bons': e.n_bons or '',
                 'EUR': e.eur or 0,
+                'EUR Dim': e.eur_dim or '',
+                'CHEP': e.CHEP or 0,
+                'CHEP Dim': e.CHEP_dim or '',
+                'LPR': e.lpr or 0,
+                'LPR Dim': e.lpr_dim or '',
                 'PERDUE': e.perdue or 0,
+                'PERDUE Dim': e.perdue_dim or '',
                 'TOTAL': e.total or 0,
                 'Commentaire': e.commentaire or ''
             })
@@ -385,9 +423,14 @@ def api_sortie():
                 'Date': s.date.strftime('%Y-%m-%d') if s.date else '',
                 'Transp': s.transp or '',
                 'N° Bons': s.n_bons or '',
-                'EUR_Rendus': s.eur_rendus or 0,
-                'EUR_Non_rendus': s.eur_non_rendus or 0,
+                'EUR Rendus': s.eur_rendus or 0,
+                'EUR Dim': s.eur_dim or '',
+                'CHEP Rendus': s.CHEP_rendus or 0,
+                'CHEP Dim': s.CHEP_dim or '',
+                'LPR Rendus': s.lpr_rendus or 0,
+                'LPR Dim': s.lpr_dim or '',
                 'PERDUE': s.perdue or 0,
+                'PERDUE Dim': s.perdue_dim or '',
                 'TOTAL': s.total or 0,
                 'Commentaire': s.commentaire or ''
             })
@@ -410,33 +453,44 @@ def api_stats():
     try:
         total_palettes = db.session.query(db.func.sum(Planning.nb_pals)).scalar() or 0
         total_retard = db.session.query(db.func.sum(Planning.retard)).scalar() or 0.0
-        count_planning = Planning.query.count()
+        count_planning = db.session.query(db.func.count(Planning.id)).scalar()
         average_retard = total_retard / count_planning if count_planning > 0 else 0.0
         total_eur_entree = db.session.query(db.func.sum(Entree.eur)).scalar() or 0
+        total_CHEP_entree = db.session.query(db.func.sum(Entree.CHEP)).scalar() or 0
+        total_lpr_entree = db.session.query(db.func.sum(Entree.lpr)).scalar() or 0
         total_perdues_entree = db.session.query(db.func.sum(Entree.perdue)).scalar() or 0
         total_eur_sortie = db.session.query(db.func.sum(Sortie.eur_rendus)).scalar() or 0
+        total_CHEP_sortie = db.session.query(db.func.sum(Sortie.CHEP_rendus)).scalar() or 0
+        total_lpr_sortie = db.session.query(db.func.sum(Sortie.lpr_rendus)).scalar() or 0
         total_perdues_sortie = db.session.query(db.func.sum(Sortie.perdue)).scalar() or 0
 
         recommendation = "Optimiser le transport" if (total_perdues_entree + total_perdues_sortie) > (total_palettes * 0.1) else "Tout va bien"
 
-        # Calcul des dettes
-        expediteurs = ["Lagny", "Soissons"]
-        owed_to = {}
-        for exp in expediteurs:
-            owed_to[exp] = db.session.query(db.func.sum(Entree.eur)).filter(Entree.transp == exp).scalar() or 0
+        # Calcul des soldes
+        partners = [t.name for t in Transporteur.query.all()]
+        balances = {}
+        for partner in partners:
+            received = db.session.query(db.func.sum(Entree.eur + Entree.CHEP + Entree.lpr)).filter(Entree.transp == partner, Entree.type_mvt.in_(["Réception", "Retour"])).scalar() or 0
+            returned = db.session.query(db.func.sum(Sortie.eur_rendus + Sortie.CHEP_rendus + Sortie.lpr_rendus)).filter(Sortie.transp == partner, Sortie.type_mvt.in_(["Expédition", "Restitution"])).scalar() or 0
+            if partner in ["Lagny", "Soissons"]:
+                balances[partner] = received - returned  # positive: we owe them
+            else:
+                balances[partner] = returned - received  # positive: they owe us
 
-        transporteurs = [t.name for t in Transporteur.query.all() if t.name not in expediteurs]
-        owed_from = {}
-        for tr in transporteurs:
-            owed_from[tr] = db.session.query(db.func.sum(Sortie.eur_rendus)).filter(Sortie.transp == tr).scalar() or 0
+        owed_to = {p: b for p, b in balances.items() if p in ["Lagny", "Soissons"] and b > 0}
+        owed_from = {p: abs(b) for p, b in balances.items() if p not in ["Lagny", "Soissons"] and b < 0}
 
         data = {
             'total_palettes': int(total_palettes),
             'total_retard': float(total_retard),
             'average_retard': float(average_retard),
             'total_eur_entree': int(total_eur_entree),
+            'total_CHEP_entree': int(total_CHEP_entree),
+            'total_lpr_entree': int(total_lpr_entree),
             'total_perdues_entree': int(total_perdues_entree),
             'total_eur_sortie': int(total_eur_sortie),
+            'total_CHEP_sortie': int(total_CHEP_sortie),
+            'total_lpr_sortie': int(total_lpr_sortie),
             'total_perdues_sortie': int(total_perdues_sortie),
             'recommendation': recommendation,
             'owed_to': owed_to,
@@ -447,25 +501,50 @@ def api_stats():
         print(f"Erreur api_stats: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/export')
+@login_required
+def export():
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Planning
+        df_planning = pd.read_sql(db.session.query(Planning).statement, db.session.bind)
+        df_planning.to_excel(writer, sheet_name='planning', index=False)
+
+        # Entree
+        df_entree = pd.read_sql(db.session.query(Entree).statement, db.session.bind)
+        df_entree.to_excel(writer, sheet_name='Entree', index=False)
+
+        # Sortie
+        df_sortie = pd.read_sql(db.session.query(Sortie).statement, db.session.bind)
+        df_sortie.to_excel(writer, sheet_name='Sortie', index=False)
+
+        # Total palettes (from API logic)
+        data = api_total_palettes().get_json()
+        df_total = pd.DataFrame(data)
+        df_total.to_excel(writer, sheet_name='Total palettes', index=False)
+
+    output.seek(0)
+    return send_file(output, download_name='suivi_palettes.xlsx', as_attachment=True)
+
 def init_data():
-    if not User.query.get('OTC-HUB-HTS3'):
+    if not db.session.get(User, 'OTC-HUB-HTS3'):
         users_data = {
-            'OTC-HUB-HTS3': 'MOMO123.',
-            'user2': 'pass2',
-            'user3': 'pass3'
+            'mohamed.bouzekri': 'med123.',
+            'r.sergio': 'sergio789.',
+            'laurent.chabrier': 'lolo01',
+            'OTC-HUB-HTS3': 'MOMO123.'
         }
         for username, password in users_data.items():
             hashed_pw = generate_password_hash(password)
             user = User(id=username, password=hashed_pw)
             db.session.add(user)
 
-    if not Transporteur.query.first():
         initial_transp = ["LOGITRANS", "TLOT", "LAMART", "Retour MTS", "Lagny", "Soissons"]
         for name in initial_transp:
             transp = Transporteur(name=name)
             db.session.add(transp)
 
-    db.session.commit()
+        db.session.commit()
 
 if __name__ == '__main__':
     with app.app_context():
