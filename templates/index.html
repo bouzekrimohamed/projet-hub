@@ -110,7 +110,14 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">QUAI</label>
-                                    <input type="text" class="form-control" id="quai">
+									<input type="text" 
+										   class="form-control" 
+										   id="quai" 
+										   maxlength="2" 
+										   pattern="[0-9]{1,2}" 
+										   inputmode="numeric" 
+										   title="Veuillez entrer un nombre à 1 ou 2 chiffres">
+
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Palettes EUR <span class="text-danger">*</span></label>
@@ -435,9 +442,16 @@
         </div>
     </div>
 
-    <footer class="{{ session.get('theme', 'light') }}">
-        Bienvenue {{ username }} - Amélioré et proposé par Mohamed Bouzekri - mohamed.bouzekri@kuehne-nagel.com
-    </footer>
+    <footer class="{{ session.get('theme', 'light') }}" 
+        style="display: flex; justify-content: space-between; align-items: center; padding: 10px;">
+    <div style="text-align: left;">
+        Bienvenue {{ username }}
+    </div>
+    <div style="text-align: center; flex: 1;">
+        Réalisé par <a href="mailto:mohamed.bouzekri@kuehne-nagel.com">Mohamed Bouzekri</a>
+    </div>
+</footer>
+
 
     <script>
         let transporteurs = [];
