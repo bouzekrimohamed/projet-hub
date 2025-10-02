@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suivi Palettes - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { background-color: #2c3e50; height: 100vh; position: fixed; width: 250px; }
+        .content { margin-left: 250px; padding: 20px; }
+        .card { border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-radius: 10px; }
+        .nav-link { color: #ecf0f1 !important; transition: background-color 0.3s; }
+        .nav-link:hover { background-color: #34495e; }
+        .btn-primary { background-color: #3498db; border-color: #3498db; }
+        .btn-success { background-color: #2ecc71; border-color: #2ecc71; }
+        .fade-in { animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .table th { background-color: #dfe6e9; }
+        .loading { display: none; text-align: center; padding: 20px; color: #7f8c8d; }
+        .form-group { margin-bottom: 1.5rem; }
+        .alert-success { display: none; margin-top: 10px; }
+        footer { position: fixed; bottom: 0; width: 100%; background-color: #2c3e50; color: #ecf0f1; text-align: center; padding: 10px; }
+        .filter-btn { margin-top: 20px; }
+        .table-loading { text-align: center; padding: 20px; }
+        .bg-purple { background-color: #6f42c1 !important; }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="p-3">
+            <h4 class="text-white mb-4"><i class="fas fa-palette"></i> Suivi Palettes</h4>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('formulaire')"><i class="fas fa-plus"></i> Nouvel Enregistrement</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('planning')"><i class="fas fa-calendar"></i> Planning</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('total')"><i class="fas fa-chart-bar"></i> Total Palettes</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('entree')"><i class="fas fa-arrow-down"></i> Entrées</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('sortie')"><i class="fas fa-arrow-up"></i> Sorties</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('stats')"><i class="fas fa-chart-pie"></i> Stats</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="content">
+        <!-- Formulaire d'enregistrement -->
+        <div id="formulaire" class="section fade-in">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="fas fa-plus"></i> Nouvel Enregistrement</h5>
+                </div>
+                <div class="card-body">
+                    <form id="formEnreg">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="date" value="{{ current_date }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Type <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="type_mvt" required>
+                                        <option value="Réception">Réception</option>
+                                        <option value="Expédition">Expédition</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="transporteur">Transporteur <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="transporteur" required>
+                                        <option value="">Sélectionner...</option>
+                                    </select>
+                                    <input type="text" class="form-control mt-1" id="nouveau_transp" placeholder="Nouveau...">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Référence (N° Bon)</label>
+                                    <input type="text" class="form-control" id="reference">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">QUAI</label>
+                                    <input type="text" class="form-control" id="quai">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Palettes EUR <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="palettes_eur" min="0" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Palettes Perdues <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="palettes_perdues" min="0" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Total Palettes (EUR + Perdues)</label>
+                                    <input type="number" class="form-control" id="total_palettes" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Heure Planifiée (HH:MM)</label>
+                                    <input type="time" class="form-control" id="heure_plan">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Heure d'Arrivée</label>
+                                    <input type="text" class="form-control" id="heure_arr" placeholder="HH:MM ou Accroche">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Heure de Départ</label>
+                                    <input type="time" class="form-control" id="heure_dep">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Commentaire</label>
+                            <textarea class="form-control" id="commentaire" rows="2"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Enregistrer</button>
+                    </form>
+                    <div class="loading mt-3" id="loadingForm">
+                        <i class="fas fa-spinner fa-spin"></i> Enregistrement en cours...
+                    </div>
+                    <div class="alert alert-success" id="successMessage" role="alert">
+                        Enregistrement effectué avec succès !
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Planning -->
+        <div id="planning" class="section" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-calendar"></i> Planning</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" id="filter_type">
+                                <option value="">Tous</option>
+                                <option value="Réception">Réception</option>
+                                <option value="Expédition">Expédition</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Transporteur</label>
+                            <select class="form-select" id="filter_transp_planning">
+                                <option value="">Tous</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Date Début</label>
+                            <input type="date" class="form-control" id="date_debut_planning">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Date Fin</label>
+                            <input type="date" class="form-control" id="date_fin_planning">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-primary w-100 filter-btn" onclick="loadPlanning()"><i class="fas fa-search"></i> Filtrer</button>
+                        </div>
+                    </div>
+                    <div class="table-loading" id="loadingPlanning">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement...
+                    </div>
+                    <table id="tablePlanning" class="table table-striped" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Jour</th>
+                                <th>Semaine</th>
+                                <th>Date</th>
+                                <th>Heure Plan</th>
+                                <th>Type</th>
+                                <th>Référence</th>
+                                <th>Transporteur</th>
+                                <th>Commentaire</th>
+                                <th>QUAI</th>
+                                <th>NB Pals</th>
+                                <th>Heure Arr</th>
+                                <th>Heure Départ</th>
+                                <th>Retard</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Palettes -->
+        <div id="total" class="section" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-chart-bar"></i> Total Palettes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Semaine</label>
+                            <input type="number" class="form-control" id="filter_semaine" placeholder="ex: 39">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date Début</label>
+                            <input type="date" class="form-control" id="date_debut_total">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date Fin</label>
+                            <input type="date" class="form-control" id="date_fin_total">
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-outline-success w-100 filter-btn" onclick="loadTotalPalettes()"><i class="fas fa-search"></i> Filtrer</button>
+                        </div>
+                    </div>
+                    <div class="table-loading" id="loadingTotal">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement...
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <canvas id="chartEntrees" height="200"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="chartSorties" height="200"></canvas>
+                        </div>
+                    </div>
+                    <table id="tableTotal" class="table table-striped" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Semaine</th>
+                                <th>Date</th>
+                                <th>EUR Entree</th>
+                                <th>Non Conf Entree</th>
+                                <th>Total Entree</th>
+                                <th>EUR Rendus</th>
+                                <th>EUR Non Rendus</th>
+                                <th>Total Sortie</th>
+                                <th>Stock QUAI</th>
+                                <th>% Retour</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Entrées -->
+        <div id="entree" class="section" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-white">
+                    <h5><i class="fas fa-arrow-down"></i> Entrées</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Transporteur</label>
+                            <select class="form-select" id="filter_transp_entree">
+                                <option value="">Tous</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Date Début</label>
+                            <input type="date" class="form-control" id="date_debut_entree">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Date Fin</label>
+                            <input type="date" class="form-control" id="date_fin_entree">
+                        </div>
+                        <button class="btn btn-outline-warning w-100 filter-btn" onclick="loadEntree()"><i class="fas fa-search"></i> Filtrer</button>
+                    </div>
+                    <div class="table-loading" id="loadingEntree">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement...
+                    </div>
+                    <table id="tableEntree" class="table table-striped" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Semaine</th>
+                                <th>Date</th>
+                                <th>Transp</th>
+                                <th>N° Bons</th>
+                                <th>EUR</th>
+                                <th>PERDUE</th>
+                                <th>TOTAL</th>
+                                <th>Commentaire</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sorties -->
+        <div id="sortie" class="section" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5><i class="fas fa-arrow-up"></i> Sorties</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Transporteur</label>
+                            <select class="form-select" id="filter_transp_sortie">
+                                <option value="">Tous</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Date Début</label>
+                            <input type="date" class="form-control" id="date_debut_sortie">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Date Fin</label>
+                            <input type="date" class="form-control" id="date_fin_sortie">
+                        </div>
+                        <button class="btn btn-outline-danger w-100 filter-btn" onclick="loadSortie()"><i class="fas fa-search"></i> Filtrer</button>
+                    </div>
+                    <div class="table-loading" id="loadingSortie">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement...
+                    </div>
+                    <table id="tableSortie" class="table table-striped" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Semaine</th>
+                                <th>Date</th>
+                                <th>Transp</th>
+                                <th>N° Bons</th>
+                                <th>EUR Rendus</th>
+                                <th>PERDUE</th>
+                                <th>TOTAL</th>
+                                <th>Commentaire</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div id="stats" class="section" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header bg-purple text-white">
+                    <h5><i class="fas fa-chart-pie"></i> Stats & Analyses</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <canvas id="pieChartEntree" height="200"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="pieChartSortie" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div id="statsSummary" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        Amélioré et proposé par Mohamed Bouzekri - mohamed.bouzekri@kuehne-nagel.com
+    </footer>
+
+    <script>
+        let transporteurs = [];
+        let expediteurs = ["Lagny", "Soissons"];
+        let planningTable, totalTable, entreeTable, sortieTable;
+        let entreeChart, sortieChart, pieEntreeChart, pieSortieChart;
+
+        $(document).ready(function() {
+            loadTransporteurs();
+            initForm();
+            showSection('formulaire');
+            calculateTotal(); // Calcul initial du total
+            $('#palettes_eur, #palettes_perdues').on('input', calculateTotal); // Mettre à jour le total en temps réel
+        });
+
+        function loadTransporteurs() {
+            $.get('/api/transporteurs', function(data) {
+                transporteurs = data;
+                updateTransporteurSelects();
+                $('#type_mvt').change(); // Trigger initial
+            });
+        }
+
+        function updateTransporteurSelects() {
+            const selects = ['#filter_transp_planning', '#filter_transp_entree', '#filter_transp_sortie'];
+            selects.forEach(sel => {
+                $(sel).empty().append('<option value="">Tous</option>');
+                transporteurs.forEach(t => $(sel).append(`<option value="${t}">${t}</option>`));
+            });
+        }
+
+        $('#type_mvt').on('change', function() {
+            var type = $(this).val();
+            var label = (type === 'Réception') ? 'Expéditeur <span class="text-danger">*</span>' : 'Transporteur <span class="text-danger">*</span>';
+            $('label[for=transporteur]').html(label);
+            $('#transporteur').empty().append('<option value="">Sélectionner...</option>');
+            var options = (type === 'Réception') ? expediteurs : transporteurs;
+            options.forEach(t => $('#transporteur').append(`<option value="${t}">${t}</option>`));
+        });
+
+        function calculateTotal() {
+            const eur = parseInt($('#palettes_eur').val()) || 0;
+            const perdues = parseInt($('#palettes_perdues').val()) || 0;
+            const total = eur + perdues;
+            $('#total_palettes').val(total);
+        }
+
+        function initForm() {
+            $('#formEnreg').on('submit', function(e) {
+                e.preventDefault();
+                const nouveauTransp = $('#nouveau_transp').val().trim();
+                if (nouveauTransp) {
+                    transporteurs.push(nouveauTransp);
+                    if ($('#type_mvt').val() === 'Réception') {
+                        expediteurs.push(nouveauTransp);
+                    }
+                    $('#type_mvt').change(); // Refresh options
+                    $('#transporteur').val(nouveauTransp);
+                    $('#nouveau_transp').val('');
+                }
+                const formData = {
+                    date: $('#date').val(),
+                    type_mvt: $('#type_mvt').val(),
+                    transporteur: $('#transporteur').val(),
+                    reference: $('#reference').val(),
+                    quai: $('#quai').val(),
+                    palettes_eur: $('#palettes_eur').val(),
+                    palettes_perdues: $('#palettes_perdues').val(),
+                    heure_plan: $('#heure_plan').val(),
+                    heure_arr: $('#heure_arr').val(),
+                    heure_dep: $('#heure_dep').val(),
+                    commentaire: $('#commentaire').val()
+                };
+                if (!formData.transporteur) {
+                    alert('Veuillez sélectionner un partenaire.');
+                    return;
+                }
+                if (parseInt(formData.palettes_eur) < 0 || parseInt(formData.palettes_perdues) < 0) {
+                    alert('Les valeurs des palettes doivent être positives.');
+                    return;
+                }
+                $('#loadingForm').show();
+                $.ajax({
+                    url: '/api/enregistrer',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function(response) {
+                        $('#loadingForm').hide();
+                        if (response.success) {
+                            $('#successMessage').fadeIn().delay(2000).fadeOut();
+                            $('#formEnreg')[0].reset();
+                            $('#date').val(new Date().toISOString().split('T')[0]);
+                            calculateTotal(); // Réinitialiser le total
+                            loadTransporteurs(); // Reload transporteurs
+                            // Rafraîchir tous les tableaux pour s'assurer que les données apparaissent
+                            loadPlanning();
+                            loadEntree();
+                            loadSortie();
+                            loadTotalPalettes();
+                            loadStats();
+                        } else {
+                            alert('Erreur: ' + response.error);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingForm').hide();
+                        alert('Erreur lors de l\'enregistrement');
+                    }
+                });
+            });
+        }
+
+        function showSection(section) {
+            $('.section').hide();
+            $('#' + section).fadeIn();
+            // Afficher le spinner de chargement et forcer le rechargement à chaque affichage
+            if (section === 'planning') {
+                $('#loadingPlanning').show();
+                loadPlanning();
+            } else if (section === 'total') {
+                $('#loadingTotal').show();
+                loadTotalPalettes();
+            } else if (section === 'entree') {
+                $('#loadingEntree').show();
+                loadEntree();
+            } else if (section === 'sortie') {
+                $('#loadingSortie').show();
+                loadSortie();
+            } else if (section === 'stats') {
+                loadStats();
+            }
+        }
+
+        function loadPlanning() {
+            const params = new URLSearchParams({
+                type: $('#filter_type').val(),
+                transporteur: $('#filter_transp_planning').val(),
+                date_debut: $('#date_debut_planning').val(),
+                date_fin: $('#date_fin_planning').val()
+            });
+            $.get('/api/planning?' + params.toString(), function(data) {
+                $('#loadingPlanning').hide();
+                if (planningTable) planningTable.destroy();
+                planningTable = $('#tablePlanning').DataTable({
+                    data: data,
+                    columns: [
+                        {data: 'Jour'}, {data: 'Semaine'}, {data: 'Date_str'},
+                        {data: 'Heure_plan'}, {data: 'Expé/Récep'}, {data: 'Référence'},
+                        {data: 'TRANSPORTEUR'}, {data: 'COMMENTAIRE'}, {data: 'QUAI'},
+                        {data: 'NB Pals Réelles Sol'}, {data: 'Heure_arr'}, {data: 'Heure_dep'},
+                        {data: 'Retard_str'}
+                    ],
+                    pageLength: 25,
+                    order: [[2, 'desc']],
+                    language: {url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'}
+                });
+            }).fail(function() {
+                $('#loadingPlanning').hide();
+                alert('Erreur lors du chargement des données Planning');
+            });
+        }
+
+        function loadTotalPalettes() {
+            const params = new URLSearchParams({
+                semaine: $('#filter_semaine').val(),
+                date_debut: $('#date_debut_total').val(),
+                date_fin: $('#date_fin_total').val()
+            });
+            $.get('/api/total_palettes?' + params.toString(), function(data) {
+                $('#loadingTotal').hide();
+                if (totalTable) totalTable.destroy();
+                totalTable = $('#tableTotal').DataTable({
+                    data: data,
+                    columns: [
+                        {data: 'Semaine'}, {data: 'Date'}, {data: 'EUR_entree'},
+                        {data: 'Non_conforme_entree'}, {data: 'TOTAL_entree'},
+                        {data: 'EUR_rendus'}, {data: 'EUR_non_rendus'}, {data: 'TOTAL_sortie'},
+                        {data: 'Stock_Sur_QUAI_EUR'}, {data: 'Pourcentage_Retour'}
+                    ],
+                    pageLength: 25,
+                    order: [[1, 'desc']],
+                    language: {url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'}
+                });
+
+                if (data.length > 0) {
+                    const ctxEntree = document.getElementById('chartEntrees').getContext('2d');
+                    if (entreeChart) entreeChart.destroy();
+                    entreeChart = new Chart(ctxEntree, {
+                        type: 'bar',
+                        data: {
+                            labels: data.map(d => d.Date),
+                            datasets: [{
+                                label: 'Entrées EUR',
+                                data: data.map(d => d.EUR_entree),
+                                backgroundColor: 'rgba(46, 204, 113, 0.6)'
+                            }]
+                        },
+                        options: { scales: { y: { beginAtZero: true } } }
+                    });
+
+                    const ctxSortie = document.getElementById('chartSorties').getContext('2d');
+                    if (sortieChart) sortieChart.destroy();
+                    sortieChart = new Chart(ctxSortie, {
+                        type: 'bar',
+                        data: {
+                            labels: data.map(d => d.Date),
+                            datasets: [{
+                                label: 'Sorties Total',
+                                data: data.map(d => d.TOTAL_sortie),
+                                backgroundColor: 'rgba(231, 76, 60, 0.6)'
+                            }]
+                        },
+                        options: { scales: { y: { beginAtZero: true } } }
+                    });
+                }
+            }).fail(function() {
+                $('#loadingTotal').hide();
+                alert('Erreur lors du chargement des données Total Palettes');
+            });
+        }
+
+        function loadEntree() {
+            const params = new URLSearchParams({
+                transporteur: $('#filter_transp_entree').val(),
+                date_debut: $('#date_debut_entree').val(),
+                date_fin: $('#date_fin_entree').val()
+            });
+            $.get('/api/entree?' + params.toString(), function(data) {
+                $('#loadingEntree').hide();
+                if (entreeTable) entreeTable.destroy();
+                entreeTable = $('#tableEntree').DataTable({
+                    data: data,
+                    columns: [
+                        {data: 'Semaine'}, {data: 'Date'}, {data: 'Transp'},
+                        {data: 'N° Bons'}, {data: 'EUR'}, {data: 'PERDUE'},
+                        {data: 'TOTAL'}, {data: 'Commentaire'}
+                    ],
+                    pageLength: 25,
+                    order: [[1, 'desc']],
+                    language: {url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'}
+                });
+            }).fail(function() {
+                $('#loadingEntree').hide();
+                alert('Erreur lors du chargement des données Entrées');
+            });
+        }
+
+        function loadSortie() {
+            const params = new URLSearchParams({
+                transporteur: $('#filter_transp_sortie').val(),
+                date_debut: $('#date_debut_sortie').val(),
+                date_fin: $('#date_fin_sortie').val()
+            });
+            $.get('/api/sortie?' + params.toString(), function(data) {
+                $('#loadingSortie').hide();
+                if (sortieTable) sortieTable.destroy();
+                sortieTable = $('#tableSortie').DataTable({
+                    data: data,
+                    columns: [
+                        {data: 'Semaine'}, {data: 'Date'}, {data: 'Transp'},
+                        {data: 'N° Bons'}, {data: 'EUR_Rendus'}, {data: 'PERDUE'},
+                        {data: 'TOTAL'}, {data: 'Commentaire'}
+                    ],
+                    pageLength: 25,
+                    order: [[1, 'desc']],
+                    language: {url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'}
+                });
+            }).fail(function() {
+                $('#loadingSortie').hide();
+                alert('Erreur lors du chargement des données Sorties');
+            });
+        }
+
+        function loadStats() {
+            $.get('/api/stats', function(data) {
+                let summaryHtml = `
+                    <p>Total Palettes: <span class="fw-bold">${data.total_palettes}</span></p>
+                    <p>Total Retard: <span class="fw-bold">${data.total_retard}</span></p>
+                    <p>Average Retard: <span class="fw-bold">${data.average_retard}</span></p>
+                    <p>Total EUR Entrée: <span class="fw-bold text-success">${data.total_eur_entree}</span></p>
+                    <p>Total Perdues Entrée: <span class="fw-bold text-danger">${data.total_perdues_entree}</span></p>
+                    <p>Total EUR Sortie: <span class="fw-bold text-success">${data.total_eur_sortie}</span></p>
+                    <p>Total Perdues Sortie: <span class="fw-bold text-danger">${data.total_perdues_sortie}</span></p>
+                    <p>Recommendation: <span class="fw-bold">${data.recommendation}</span></p>
+                `;
+
+                let owedToHtml = '<h5 class="mt-4">Dettes envers Expéditeurs</h5><table class="table table-bordered"><thead class="table-dark"><tr><th>Expéditeur</th><th>Palettes Dues</th></tr></thead><tbody>';
+                Object.entries(data.owed_to).forEach(([key, value]) => {
+                    owedToHtml += `<tr><td>${key}</td><td class="text-danger fw-bold">${value}</td></tr>`;
+                });
+                owedToHtml += '</tbody></table>';
+
+                let owedFromHtml = '<h5 class="mt-4">Dettes des Transporteurs</h5><table class="table table-bordered"><thead class="table-dark"><tr><th>Transporteur</th><th>Palettes Dues</th></tr></thead><tbody>';
+                Object.entries(data.owed_from).forEach(([key, value]) => {
+                    owedFromHtml += `<tr><td>${key}</td><td class="text-success fw-bold">${value}</td></tr>`;
+                });
+                owedFromHtml += '</tbody></table>';
+
+                $('#statsSummary').html(summaryHtml + owedToHtml + owedFromHtml);
+
+                // Pie Chart for Entrée
+                const ctxEntree = document.getElementById('pieChartEntree').getContext('2d');
+                if (pieEntreeChart) pieEntreeChart.destroy();
+                pieEntreeChart = new Chart(ctxEntree, {
+                    type: 'pie',
+                    data: {
+                        labels: ['EUR', 'Perdues'],
+                        datasets: [{
+                            data: [data.total_eur_entree, data.total_perdues_entree],
+                            backgroundColor: ['rgba(46, 204, 113, 0.6)', 'rgba(231, 76, 60, 0.6)']
+                        }]
+                    }
+                });
+                // Pie Chart for Sortie
+                const ctxSortie = document.getElementById('pieChartSortie').getContext('2d');
+                if (pieSortieChart) pieSortieChart.destroy();
+                pieSortieChart = new Chart(ctxSortie, {
+                    type: 'pie',
+                    data: {
+                        labels: ['EUR Rendus', 'Perdues'],
+                        datasets: [{
+                            data: [data.total_eur_sortie, data.total_perdues_sortie],
+                            backgroundColor: ['rgba(46, 204, 113, 0.6)', 'rgba(231, 76, 60, 0.6)']
+                        }]
+                    }
+                });
+            });
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>
