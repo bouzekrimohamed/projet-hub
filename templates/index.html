@@ -22,7 +22,6 @@
         .nav-link { color: #ecf0f1 !important; transition: background-color 0.3s; text-align: left; }
         .nav-link:hover { background-color: #34495e; }
         .btn-primary { background-color: #3498db; border-color: #3498db; }
-        .btn-secondary { background-color: #6c757d; border-color: #6c757d; }
         .btn-success { background-color: #2ecc71; border-color: #2ecc71; }
         .fade-in { animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -49,13 +48,6 @@
         .dark .card-header { color: #fff; }
         .dark .text-success { color: #2ecc71 !important; }
         .dark .text-danger { color: #ff6b6b !important; }
-        .dark .btn-secondary { background-color: #4f4f4f; border-color: #4f4f4f; }
-        .dark .btn-outline-primary { border-color: #3498db; color: #3498db; }
-        .dark .btn-outline-success { border-color: #2ecc71; color: #2ecc71; }
-        .dark .btn-outline-warning { border-color: #ffc107; color: #ffc107; }
-        .dark .btn-outline-danger { border-color: #dc3545; color: #dc3545; }
-        .dark .table-striped tbody tr:nth-of-type(odd) { background-color: #222; }
-        .dark .table-striped tbody tr:nth-of-type(even) { background-color: #333; }
     </style>
 </head>
 <body class="{{ session.get('theme', 'light') }}">
@@ -118,14 +110,7 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">QUAI</label>
-									<input type="text" 
-										   class="form-control" 
-										   id="quai" 
-										   maxlength="2" 
-										   pattern="[0-9]{1,2}" 
-										   inputmode="numeric" 
-										   title="Veuillez entrer un nombre à 1 ou 2 chiffres">
-
+                                    <input type="text" class="form-control" id="quai">
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Palettes EUR <span class="text-danger">*</span></label>
@@ -138,7 +123,7 @@
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Palettes <span class="text-shep">CHEP</span> <span class="text-danger">*</span></label>
+                                    <label class="form-label">Palettes <span class="text-shep">SHEP</span> <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="number" class="form-control" id="palettes_shep" min="0" value="0" required>
                                         <select class="form-select" id="shep_dim">
@@ -450,16 +435,9 @@
         </div>
     </div>
 
-    <footer class="{{ session.get('theme', 'light') }}" 
-        style="display: flex; justify-content: space-between; align-items: center; padding: 10px;">
-    <div style="text-align: left;">
-        Bienvenue {{ username }}
-    </div>
-    <div style="text-align: center; flex: 1;">
-        Réalisé par <a href="mailto:mohamed.bouzekri@kuehne-nagel.com">Mohamed Bouzekri</a>
-    </div>
-</footer>
-
+    <footer class="{{ session.get('theme', 'light') }}">
+        Bienvenue {{ username }} - Amélioré et proposé par Mohamed Bouzekri - mohamed.bouzekri@kuehne-nagel.com
+    </footer>
 
     <script>
         let transporteurs = [];
@@ -794,7 +772,7 @@
                 });
                 owedToHtml += '</tbody></table>';
 
-                let owedFromHtml = '<h5 class="mt-4">Dettes des Transporteurs</h5><table class="table table-bordered table-improved"><thead class="table-dark"><tr><th>Partenaire</th><th>Palettes Dues</th></tr></thead><tbody>';
+                let owedFromHtml = '<h5 class="mt-4">Dettes des Partenaires</h5><table class="table table-bordered table-improved"><thead class="table-dark"><tr><th>Partenaire</th><th>Palettes Dues</th></tr></thead><tbody>';
                 Object.entries(data.owed_from).forEach(([key, value]) => {
                     let color = 'text-success';
                     owedFromHtml += `<tr><td>${key}</td><td class="${color} fw-bold">${value}</td></tr>`;
